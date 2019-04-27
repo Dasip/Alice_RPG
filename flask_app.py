@@ -27,7 +27,7 @@ Crossing.add_action(Moving('войти в ангар', Hangar))
 Engine_room.add_action(Moving('вернуться на перекресток', Crossing))
 Engine_room.add_action(Moving('подойти к терминалу', Engine_terminal))
 Engine_room.add_action(Adding('осмотреть отсек', 'Журнал дежурного инженера', 'Вы обнаружили журнал дежурного инженера реакторного отсека. В нем записан код от терминала реакторного терминала.',
-                              {'action': Hacking('запустить аварийные реакторы', 'Вы вводите коды из найденного журнала и успешно входите в систему, запуская аварийные реакторы.', Hangar, Engine_terminal),
+                              {'action': Hacking('запустить аварийные реакторы', 'Вы вводите коды из найденного журнала и успешно входите в систему, запуская аварийные реакторы. ', Hangar, Engine_terminal),
                                'object': Engine_terminal}))
 
 Engine_terminal.add_action(Moving('отойти от терминала', Engine_room))
@@ -51,42 +51,47 @@ def main2():
  
  
 def handle_dialog(res, req):
-    user_id = req['session']['user_id']
- 
-    if req['session']['new']:
-        res['response']['text'] = '''Система управления транспортным кораблем модели "Мунбридж Хэвикэриэр Мк II",
-        назовите свое имя...'''
-        sessionStorage[user_id] = {
-            'first_name': None
-        }
-        return
+    
+    if not res['response']['end_session']:
+        user_id = req['session']['user_id']
+     
+        if req['session']['new']:
+            res['response']['text'] = '''Система управления транспортным кораблем модели "Мунбридж Хэвикэриэр Мк II",
+            назовите свое имя...'''
+            sessionStorage[user_id] = {
+                'first_name': None
+            }
+            return
 
-    if sessionStorage[user_id]['first_name'] is None:
-        
-        first_name = get_first_name(req)
-        if first_name is None:
-            res['response']['text'] = \
-                'Некорректные данные - повторите ввод данных (имя пользователя)...'
+        if sessionStorage[user_id]['first_name'] is None:
+            
+            first_name = get_first_name(req)
+            if first_name is None:
+                res['response']['text'] = \
+                    'Некорректные данные - повторите ввод данных (имя пользователя)...'
+                
+            else:
+                the_hero = Person(Start_loc)
+                sessionStorage[user_id]['first_name'] = first_name
+                sessionStorage[user_id]['hero'] = the_hero
+                sessionStorage[user_id]['actions'] = [i.text for i in the_hero.location.actions]
+                a = sessionStorage[user_id]['hero']
+                create_mess(res, {'text': 'Доступ открыт. Добро пожаловать, ' + first_name.title()\
+                              + '. ' + a.current_loc()['text'],
+                              'actions': sessionStorage[user_id]['actions']})
             
         else:
-            the_hero = Person(Start_loc)
-            sessionStorage[user_id]['first_name'] = first_name
-            sessionStorage[user_id]['hero'] = the_hero
-            sessionStorage[user_id]['actions'] = [i.text for i in the_hero.location.actions]
-            a = sessionStorage[user_id]['hero']
-            create_mess(res, {'text': 'Доступ открыт. Добро пожаловать,' + first_name.title()\
-                          + a.current_loc()['text']})
+            action = req['request']['command']
+            for i in sessionStorage[user_id]['actions']:
+                if i in action:
+                    action = i
+                    break
             
-    else:
-        action = req['text']
-        for i in sessionStorage['actions']:
-            if i in action:
-                action = i
-                break
-            
-        ans = sessionStorage['hero'].activate(action)
-        create_mess(res, ans)
-        sessionStorage['actions'] = ans['actions']
+            ans = sessionStorage[user_id]['hero'].activate(action)
+            create_mess(res, ans)
+            if sessionStorage[user_id]['hero'].rescued:
+                res['response']['end_session'] = True
+            sessionStorage[user_id]['actions'] = ans['actions']
             
 def create_mess(res, mess):
     #res['response']['card'] = {}
@@ -100,7 +105,7 @@ def create_mess(res, mess):
 def create_buttons(mess):
     return [
         {
-            'title': city.title(),
+            'title': text,
             'hide': True
             } for text in mess['actions']
         ]       

@@ -5,7 +5,7 @@ class Rescuing():
         self.text = text
         
     def do(self, player):
-        player.rescue()
+        return player.rescue()
         
         
 class Hacking():
@@ -23,8 +23,9 @@ class Hacking():
         
     def do(self, player):
         self.parent.text = 'Мунбридж Хэвикэриэр Мк II" - система функционирует. Вы можете: '
-        player.hack(self.result)
         self.unlock_hangar()
+        return player.hack(self.result)
+        
         
 
 class Moving():
@@ -35,7 +36,7 @@ class Moving():
         self.destination = destination
         
     def do(self, player):
-        player.move(self.destination)
+        return player.move(self.destination)
 
 
 class Adding():
@@ -49,7 +50,7 @@ class Adding():
         
     def do(self, player):
         self.extra_action['object'].add_action(self.extra_action['action'])
-        player.take(self.item, self.prize)
+        return player.take(self.item, self.prize)
         
 
 class Location():
@@ -86,6 +87,7 @@ class Person():
     def __init__(self, start_loc):
         self.inventory = ['Фонарик']
         self.location = start_loc
+        self.rescued = False
         
     def current_loc(self):
         return {
@@ -114,8 +116,10 @@ class Person():
             }
     
     def rescue(self):
+        self.rescued = True
         return {
-            'text': 'Вы выбрались с корабля и направились к ближайшему спасательному судну. Вы спаслись.'
+            'text': 'Вы выбрались с корабля и направились к ближайшему спасательному судну. Вы спаслись.',
+            'actions': []
             }
     
     def activate(self, action):
@@ -123,7 +127,7 @@ class Person():
             action = list(filter(lambda x: x.text == action, self.location.actions))[0]
             if action.actype != 'moving':
                 self.location.actions.remove(action)
-            action.do(self)
+            return action.do(self)
         else:
             return {
                 'text': 'Вы не можете этого сделать. ' + self.location.inform() + '.',
